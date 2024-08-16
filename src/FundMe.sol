@@ -8,11 +8,11 @@ error FundMe__NotOwner();
 
 contract FundMe {
     using PriceConverter for uint256;
-    mapping(address funder => uint256 amountFunded) public addressToAmountFunded;
-    address[] public funders;
+    mapping(address  => uint256 ) private s_addressToAmountFunded;
+    address[] private s_funders;
 
     // constant - takes less gas  // non-constant - takes more gas
-    address public immutable i_owner;
+    address private immutable i_owner;
     uint256 public constant MIN_USD = 5e18; 
     AggregatorV3Interface private s_priceFeed;
 
@@ -24,8 +24,8 @@ contract FundMe {
     function fund() public payable {
         // Allow users to send a min $
         require(msg.value.getConversionRate(s_priceFeed) >= MIN_USD, "You didn't send enough ETH"); // 1e18 = 1ETH = 1 * 10 **18  
-        addressToAmountFunded[msg.sender] += msg.value;  
-        funders.push(msg.sender);
+        s_addressToAmountFunded[msg.sender] += msg.value;  
+        s_funders.push(msg.sender);
     }
 
     function getVersion() public view returns (uint256) {
@@ -33,11 +33,11 @@ contract FundMe {
     }
 
     function withdraw() public onlyOwner {
-        for (uint256 funderIndex = 0; funderIndex < funders.length; funderIndex++){
-            address funder = funders[funderIndex];
-            addressToAmountFunded[funder] = 0;
+        for (uint256 funderIndex = 0; funderIndex < s_funders.length; funderIndex++){
+            address funder = s_funders[funderIndex];
+            s_addressToAmountFunded[funder] = 0;
         }
-        funders = new address[](0); //reset the array
+        s_funders = new address[](0); //reset the array
         // withdraw the funds
 
         //                                                  transfer
@@ -67,6 +67,21 @@ contract FundMe {
     fallback() external payable {
         fund();
     }
+
+    /*
+     * view / pure functions (Getters)
+    */
+   function getAddressToAmountFunded(address fundingAddress) external view returns (uint256) {
+       return s_addressToAmountFunded[fundingAddress];
+   }
+
+   function getFunder(uint256 index) external view returns (address) {
+       return s_funders[index];
+   }
+
+   function getOwner() external view returns (address) {
+       return i_owner;
+   }
 } 
 
 
